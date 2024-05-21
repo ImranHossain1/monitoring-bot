@@ -1,0 +1,43 @@
+prt-cst-pve-03 (prt-cst-pve-03)
+✅️ SERVICE FLAPPINGSTOP
+
+PVE Node cst-gpu-pve-01
+State changed from OK to OK
+ID: 5, Votes: 1
+
+IPv4: 10.4.3.53 
+IPv6: 
+2024-05-16 16:04:35 | checkmk_ntt
+
+prt-cst-pve-03 (prt-cst-pve-03)
+✅️ SERVICE FLAPPINGSTOP
+
+PVE Node cst-gpu-pve-01
+State changed from OK to OK
+ID: 5, Votes: 1
+
+IPv4: 10.4.3.53 
+IPv6: 
+2024-05-16 16:04:35 | checkmk_ntt
+
+cst-gpu-pve-02 (cst-gpu-pve-02)
+✅️ SERVICE FLAPPINGSTOP
+
+PVE Cluster State
+State changed from OK to OK
+Name: corosync_votequorum, Nodes: 6, No faults
+
+IPv4: 10.4.3.56 
+IPv6: 
+2024-05-16 16:04:36 | checkmk_ntt
+
+cst-gpu-pve-02 (cst-gpu-pve-02)
+✅️ SERVICE FLAPPINGSTOP
+
+PVE Cluster State
+State changed from OK to OK
+Name: corosync_votequorum, Nodes: 6, No faults
+
+IPv4: 10.4.3.57 
+IPv6: 
+2024-05-16 16:04:36 | checkmk_ntt

@@ -5,9 +5,32 @@ PVE Node cst-gpu-pve-01
 State changed from OK to OK
 ID: 5, Votes: 1
 
-IPv4: 10.4.3.53 
+IPv4: 10.4.3.55
 IPv6: 
 2024-05-16 16:04:35 | checkmk_ntt
+
+cst-gpu-pve-01 (cst-gpu-pve-01)
+✅️ HOST RECOVERY
+
+State changed from DOWN to UP
+OK - 10.4.3.55: rta 0.960ms, lost 0%
+
+IPv4: 10.4.3.55 
+IPv6: 
+2024-05-16 15:36:59 | checkmk_ntt
+
+
+prt-cst-pve-03 (prt-cst-pve-03)
+🆘️ SERVICE PROBLEM
+
+PVE Node cst-gpu-pve-01
+State changed from OK to CRIT
+Node is missing
+
+IPv4: 10.4.3.55
+IPv6: 
+2024-05-16 15:30:28 | checkmk_ntt
+
 
 prt-cst-pve-03 (prt-cst-pve-03)
 ✅️ SERVICE FLAPPINGSTOP

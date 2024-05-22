@@ -3,6 +3,7 @@ import sessionManager from "../utils/sessionManager.js";
 import { countIPAddresses } from "../utils/extractIpAddress.js";
 
 export async function handleMessage(ctx) {
+  const hostGroup = ctx.update.message.chat.title;
   const from = ctx.update.message.from;
   const chatId = ctx.update.message.chat.id;
   const message = ctx.update.message.text;
@@ -30,16 +31,19 @@ export async function handleMessage(ctx) {
       },
       async (userId, messages) => {
         // Count IP addresses in the aggregated messages
-        const ipCounts = countIPAddresses(messages);
-        const ipCountsMessage = Object.entries(ipCounts)
-          .map(([ip, count]) => `${ip}: ${count} times`)
-          .join("\n");
+        const individualIpSummary = countIPAddresses(messages);
 
         // Send callback (sends the messages after 10 seconds)
-        const messageCount = messages.length;
-        const aggregatedMessage =
-          `You have ${messageCount} new service alerts in the last 10 seconds.\nPlease confirm receipt by clicking the button below.\n\n` +
-          `\n\nIP Address Counts:\n${ipCountsMessage}`;
+        // Construct the aggregated message
+        let aggregatedMessage = `You have ${messages.length} new service alerts in the last 5 minutes. Please confirm receipt.\n`;
+
+        for (const [ip, details] of Object.entries(individualIpSummary)) {
+          aggregatedMessage +=
+            `\n\nSystemd Service Summary: \n${details.firstSummary} -> ${details.lastSummary}\n\n` +
+            `OUTPUT:\nTotal: ${details.count} \nInitial State: ${details.firstStateChange}\n` +
+            `Current State : ${details.lastStateChange}\n\n\n` +
+            `DETAILS:\nIPv4: ${ip}\nHOSTGROUP: ${hostGroup}`;
+        }
 
         await ctx.telegram.sendMessage(
           destinationChatId,

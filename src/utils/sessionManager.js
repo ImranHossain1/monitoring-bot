@@ -1,11 +1,15 @@
+import { v4 as uuidv4 } from "uuid";
+
 class SessionManager {
   constructor() {
     this.sessions = {};
   }
 
   startSession(userId, message, saveCallback, sendCallback, reminderCallback) {
+    // Check if a session already exists for the user
     if (!this.sessions[userId]) {
       this.sessions[userId] = {
+        sessionId: uuidv4(),
         messages: [],
         confirmed: false,
         sendTimer: null,
@@ -20,19 +24,19 @@ class SessionManager {
     if (!this.sessions[userId].sendTimer) {
       this.sessions[userId].sendTimer = setTimeout(() => {
         this.sendMessages(userId, saveCallback, sendCallback, reminderCallback);
-      }, 20000); // 10 seconds
+      }, 20000); // 20 seconds
     }
   }
 
-  sendMessages(userId, saveCallback, sendCallback, reminderCallback) {
+  async sendMessages(userId, saveCallback, sendCallback, reminderCallback) {
     const session = this.sessions[userId];
     if (session) {
-      saveCallback(userId, session.messages);
-      sendCallback(userId, session.messages).then(() => {
+      await saveCallback(session.sessionId, session.messages);
+      await sendCallback(session.sessionId, session.messages).then(() => {
         // Set the reminder timer for 15 seconds after the messages are sent
         session.reminderTimer = setTimeout(() => {
           this.sendReminder(userId, reminderCallback);
-        }, 30000); // 15 seconds
+        }, 15000); // 15 seconds
       });
 
       // Reset the session's messages but keep the session active for confirmation
@@ -44,16 +48,19 @@ class SessionManager {
   sendReminder(userId, reminderCallback) {
     const session = this.sessions[userId];
     if (session && !session.confirmed) {
-      reminderCallback(userId);
+      reminderCallback(session.sessionId);
     }
   }
 
-  confirmSession(userId) {
-    const session = this.sessions[userId];
-    if (session) {
-      session.confirmed = true;
-      clearTimeout(session.reminderTimer);
-      this.endSession(userId); // End the session after confirmation
+  confirmSession(sessionId) {
+    for (const userId in this.sessions) {
+      const session = this.sessions[userId];
+      if (session && session.sessionId === sessionId) {
+        session.confirmed = true;
+        clearTimeout(session.reminderTimer);
+        this.endSession(userId); // End the session after confirmation
+        break;
+      }
     }
   }
 

@@ -16,26 +16,57 @@ export async function handleMessage(ctx) {
     return; // Ignore messages not from the specified group
   }
 
-  const keyboard = Markup.inlineKeyboard([
-    Markup.button.callback("CONFIRM", "confirm_alert"),
-  ]);
-
   try {
     // Start or continue the session
     sessionManager.startSession(
       from.id,
       message,
-      (userId, messages) => {
+      (sessionId, messages) => {
         // Save callback (can be used to save messages if needed)
-        console.log(`Messages saved for user ID: ${userId}`);
+        console.log(`Messages saved for session ID: ${sessionId}`);
       },
-      async (userId, messages) => {
+      async (sessionId, messages) => {
         // Count IP addresses in the aggregated messages
         const individualIpSummary = countIPAddresses(messages);
 
-        // Send callback (sends the messages after 10 seconds)
+        // Send callback (sends the messages after 20 seconds)
         // Construct the aggregated message
-        let aggregatedMessage = `You have ${messages.length} new service alerts in the last 5 minutes. Please confirm receipt.\n`;
+        let aggregatedMessage = `You have ${messages.length} new service alerts in the last 20 seconds. Please confirm receipt.\n`;
+
+        for (const [ip, details] of Object.entries(individualIpSummary)) {
+          aggregatedMessage +=
+            `\n\nSystemd Service Summary: \n${details.firstSummary} -> ${details.lastSummary}\n\n` +
+            `OUTPUT:\nTotal: ${details.count} \nInitial State: ${details.firstStateChange}\n` +
+            `Current State : ${details.lastStateChange}\n\n\n` +
+            `DETAILS:\nIPv4: ${ip}\nHOSTGROUP: ${hostGroup}`;
+        }
+
+        const keyboard = Markup.inlineKeyboard([
+          Markup.button.callback("CONFIRM", `confirm_alert_${sessionId}`),
+        ]);
+
+        await ctx.telegram.sendMessage(
+          destinationChatId,
+          aggregatedMessage,
+          keyboard
+        );
+
+        console.log(
+          `Messages sent to destination chat ID: ${destinationChatId}`
+        );
+      },
+      async (sessionId) => {
+        // Reminder callback (sends the reminder after 15 seconds if not confirmed)
+        const keyboard = Markup.inlineKeyboard([
+          Markup.button.callback("CONFIRM", `confirm_alert_${sessionId}`),
+        ]);
+
+        // Count IP addresses in the aggregated messages
+        const individualIpSummary = countIPAddresses(messages);
+
+        // Send callback (sends the messages after 20 seconds)
+        // Construct the aggregated message
+        let aggregatedMessage = `Reminder: You have ${messages.length} new service pending alerts. Please confirm receipt.\n`;
 
         for (const [ip, details] of Object.entries(individualIpSummary)) {
           aggregatedMessage +=
@@ -48,18 +79,6 @@ export async function handleMessage(ctx) {
         await ctx.telegram.sendMessage(
           destinationChatId,
           aggregatedMessage,
-          keyboard
-        );
-
-        console.log(
-          `Messages sent to destination chat ID: ${destinationChatId}`
-        );
-      },
-      async (userId) => {
-        // Reminder callback (sends the reminder after 15 seconds if not confirmed)
-        await ctx.telegram.sendMessage(
-          destinationChatId,
-          "Reminder: Please confirm receipt of the message.",
           keyboard
         );
       }

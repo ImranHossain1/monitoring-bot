@@ -11,6 +11,6 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 bot.start(start);
 bot.command("getGroupId", getGroupId);
 bot.command("confirm", handleReply);
-bot.action("confirm_alert", handleConfirmAlert);
+bot.action(/confirm_alert_(.+)/, handleConfirmAlert);
 bot.on(message("text"), handleMessage);
 export default bot;

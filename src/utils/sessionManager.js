@@ -1,26 +1,34 @@
 import { v4 as uuidv4 } from "uuid";
+import { countIPAddresses } from "./extractIpAddress.js";
 
 class SessionManager {
   constructor() {
     this.sessions = {};
   }
 
-  startSession(userId, message, saveCallback, sendCallback, reminderCallback) {
-    // Check if a session already exists for the user
+  startSession(
+    userId,
+    message,
+    hostGroup,
+    saveCallback,
+    sendCallback,
+    reminderCallback
+  ) {
     if (!this.sessions[userId]) {
       this.sessions[userId] = {
         sessionId: uuidv4(),
         messages: [],
+        hostGroup: hostGroup, // Store the hostGroup
         confirmed: false,
         sendTimer: null,
         reminderTimer: null,
+        messageIds: [], // Store message IDs to update both messages
+        aggregatedMessage: "", // Store the aggregated message
       };
     }
 
-    // Add the message to the current session's messages
     this.sessions[userId].messages.push(message);
 
-    // If there is no send timer, start one
     if (!this.sessions[userId].sendTimer) {
       this.sessions[userId].sendTimer = setTimeout(() => {
         this.sendMessages(userId, saveCallback, sendCallback, reminderCallback);
@@ -32,24 +40,52 @@ class SessionManager {
     const session = this.sessions[userId];
     if (session) {
       await saveCallback(session.sessionId, session.messages);
-      await sendCallback(session.sessionId, session.messages).then(() => {
-        // Set the reminder timer for 15 seconds after the messages are sent
-        session.reminderTimer = setTimeout(() => {
-          this.sendReminder(userId, reminderCallback);
-        }, 15000); // 15 seconds
-      });
+      session.aggregatedMessage = this.aggregateMessages(
+        session.messages,
+        session.hostGroup
+      ); // Store the aggregated message
+      const messageId = await sendCallback(
+        session.sessionId,
+        session.aggregatedMessage
+      );
+      session.messageIds.push(messageId); // Store the message ID
 
-      // Reset the session's messages but keep the session active for confirmation
+      session.reminderTimer = setTimeout(async () => {
+        const reminderMessageId = await this.sendReminder(
+          userId,
+          reminderCallback
+        );
+        session.messageIds.push(reminderMessageId); // Store the reminder message ID
+      }, 15000); // 15 seconds
+
       session.messages = [];
-      session.sendTimer = null; // Reset the send timer
+      session.sendTimer = null;
     }
   }
 
-  sendReminder(userId, reminderCallback) {
+  async sendReminder(userId, reminderCallback) {
     const session = this.sessions[userId];
     if (session && !session.confirmed) {
-      reminderCallback(session.sessionId);
+      return await reminderCallback(
+        session.sessionId,
+        session.aggregatedMessage
+      );
     }
+  }
+
+  aggregateMessages(messages, hostGroup) {
+    const individualIpSummary = countIPAddresses(messages);
+    let aggregatedMessage = `You have ${messages.length} new service alerts. Please confirm receipt.\n`;
+
+    for (const [ip, details] of Object.entries(individualIpSummary)) {
+      aggregatedMessage +=
+        `\n\nSystemd Service Summary: \n${details.firstSummary} -> ${details.lastSummary}\n\n` +
+        `OUTPUT:\nTotal: ${details.count} \nInitial State: ${details.firstStateChange}\n` +
+        `Current State : ${details.lastStateChange}\n\n\n` +
+        `DETAILS:\nIPv4: ${ip}\nHOSTGROUP: ${hostGroup}\n`;
+    }
+
+    return aggregatedMessage;
   }
 
   confirmSession(sessionId) {
@@ -58,8 +94,8 @@ class SessionManager {
       if (session && session.sessionId === sessionId) {
         session.confirmed = true;
         clearTimeout(session.reminderTimer);
-        this.endSession(userId); // End the session after confirmation
-        break;
+        this.endSession(userId);
+        return session.messageIds; // Return message IDs to update both messages
       }
     }
   }
